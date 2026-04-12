@@ -4,6 +4,9 @@ set -euo pipefail
 cd /app
 
 run_tasks() {
+  if [ $(date +%H) -eq 8 ]; then
+    > /app/script.log
+  fi
   echo "[$(date --iso-8601=seconds)] Starting scheduled run" >> /app/script.log
   python ./scripts/get_calendar.py >> /app/script.log 2>&1
   python ./scripts/pokemon.py >> /app/script.log 2>&1

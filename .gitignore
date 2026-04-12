@@ -1,0 +1,5 @@
+data/*.json
+ics/*
+get_calendar.py
+_*
+*.log
