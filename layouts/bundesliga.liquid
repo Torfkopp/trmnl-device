@@ -1,0 +1,132 @@
+<div class="view view--{{ size }}">
+  <div class="layout">
+    <div class="grid grid--cols-2 gap--xlarge">
+      <div>
+        <span class="title">Tabelle</span><br /><br />
+        <div class="grid grid--cols-2">
+          <table class="table table--condensed">
+            <tbody class="standings-col1"></tbody>
+          </table>
+          <table class="table table--condensed">
+            <tbody class="standings-col2"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <span class="title spieltag">Spieltag</span><br /><br />
+        <table class="table table--condensed">
+          <tbody class="matches"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="title_bar">
+    <img
+      class="image image-stroke image-stroke--small"
+      src="https://filedn.eu/lm9kmI3DGyeXIWHOXT8UUwH/TRMNL/logo.png"
+    />
+    <span class="title">Bundesliga</span>
+    <span class="instance seasonName"></span>
+  </div>
+  <script>
+      const COLORS = {
+        championsLeague: "bg--gray-1",
+        europaLeague: "bg--gray-4",
+        conferenceLeague: "bg--gray-6",
+        rest: "",
+        relegation: "bg--gray-6",
+        relegated: "bg--gray-1",
+      };
+
+      function getRowColor(position) {
+        if (position < 4) return COLORS.championsLeague;
+        if (position < 5) return COLORS.europaLeague;
+        if (position < 6) return COLORS.conferenceLeague;
+        if (position < 15) return COLORS.rest;
+        if (position < 16) return COLORS.relegation;
+        return COLORS.relegated;
+      }
+
+      const favouriteTeam = "bremen";
+      
+        function createRow(team, position) {
+        const isFavorite =
+          favouriteTeam &&
+          favouriteTeam !== "none" &&
+          team.shortName.toLowerCase() === favouriteTeam;
+        const row = document.createElement("tr");
+        if (isFavorite) row.classList.add("favorite-team-row");
+        row.innerHTML = ` <td><div class="position ${getRowColor(
+          position
+        )}">-</div></td> <td><span class="positionNumber label label--small">${
+          position + 1
+        }.</span></td> <td><span class="teamName label ${
+          isFavorite ? "label--small label--outline" : "label--small"
+        }">${
+          team.shortName
+        }</span></td> <td><span class="label label--small ptsNumber">${
+          team.points
+        }</span></td> `;
+        return row;
+      }
+      let currentYear = new Date().getFullYear();
+      if (new Date().getMonth() < 7) currentYear -= 1;
+      const seasonName = document.querySelector(".seasonName");
+      seasonName.textContent = `Saison ${currentYear}/${currentYear + 1}`;
+      fetch(`https://api.openligadb.de/getbltable/bl1/${currentYear}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const col1 = document.querySelector(".standings-col1");
+          const col2 = document.querySelector(".standings-col2");
+          col1.innerHTML = "";
+          col2.innerHTML = "";
+          data.forEach((team, index) => {
+            const row = createRow(team, index);
+            (index < 9 ? col1 : col2).appendChild(row);
+          });
+        })
+        .catch(console.error);
+      fetch("https://api.openligadb.de/getmatchdata/bl1")
+        .then((res) => res.json())
+        .then((data) => {
+          const spieltag = document.querySelector(".spieltag");
+          const firstDate = new Date(data[0].matchDateTime);
+          const lastDate = new Date(data[data.length - 1].matchDateTime);
+          data.forEach((match, index) => {
+            spieltag.textContent = `${
+              match.group.groupName
+            } (${firstDate.toLocaleDateString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+            })} - ${lastDate.toLocaleDateString("de-DE", {
+              day: "2-digit",
+              month: "2-digit",
+            })})`;
+            const date = new Date(match.matchDateTime);
+            const dateStr = date.toLocaleDateString("de-DE", {
+              weekday: "short",
+            });
+            const timeStr = date.toLocaleTimeString("de-DE", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            });
+            const row = document.createElement("tr");
+            row.innerHTML = ` <td><span class="label label--small">${
+              match.team1.shortName
+            } - ${
+              match.team2.shortName
+            }</span></td> <td><span class="label label--small">${dateStr}. ${timeStr}</span></td> <td><span class="label label--small">${
+              match.matchIsFinished
+                ? match.matchResults[1].pointsTeam1 +
+                  ":" +
+                  match.matchResults[1].pointsTeam2
+                : "–:–"
+            }</span></td> `;
+            document.querySelector(".matches").appendChild(row);
+          });
+        })
+        .catch(console.error);
+    </script>
+</div>

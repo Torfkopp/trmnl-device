@@ -1,0 +1,96 @@
+<script>
+async function fetchPokemonData() {
+  const res = await fetch('http://192.168.178.32:8000/pokemon.json');
+  return await res.json();
+}
+
+function renderPokemon(data) {
+  document.querySelector('[data-pokemon-artwork]').src = data.artwork;
+  document.querySelector('[data-pokemon-name]').textContent = data.name;
+  document.querySelector('[data-pokemon-types]').textContent = data.types;
+  document.querySelector('[data-pokemon-gender]').textContent = data.gender;
+  document.querySelector('[data-pokemon-species]').textContent = data.species;
+  document.querySelector('[data-pokemon-size]').textContent = data.size;
+  document.querySelector('[data-pokemon-weight]').textContent = data.weight;
+  document.querySelector('[data-pokemon-abilities]').textContent = data.abilities;
+  document.querySelector('[data-pokemon-pokedex]').textContent = data.pokedex;
+}
+
+fetchPokemonData().then(renderPokemon);
+</script>
+<div class="view view--{{ size }}">
+    <div class="layout layout--row layout--stretch">
+  <!-- Left Column: Artwork -->
+  <div class="flex flex--col flex--stretch flex--center-x flex--center-y h-full">
+    <div class="flex flex--center-x" style="max-height: 80%; width: auto;">
+      <img 
+        data-pokemon-artwork
+        src="" 
+        alt="pokemon Artwork" 
+        class="image-dither" />
+    </div>
+
+    <!-- Pokémon Name -->
+    <div class="flex flex--center-x">
+  <span class="value value--small" data-value-fit="true" style="font-weight: bold;" data-pokemon-name></span>
+    </div>
+  </div>
+
+  <!-- Right Column: Details -->
+  <div class="flex flex--col flex--left h-full">
+    <!-- Pokémon Details -->
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-types></span>
+        <span class="label label--small">Typen</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-gender></span>
+        <span class="label label--small">Geschlecht</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-species></span>
+        <span class="label label--small">Art</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-size></span>
+        <span class="label label--small">Größe</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-weight></span>
+        <span class="label label--small">Gewicht</span>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="meta"></div>
+      <div class="content">
+  <span class="value value--xsmall" data-pokemon-abilities></span>
+        <span class="label label--small">Fähigkeiten</span>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="title_bar">
+  <img class="image" src="https://upload.wikimedia.org/wikipedia/commons/2/23/Pok%C3%A9_Ball.svg" />
+  <span class="title">Who's That Pokémon?</span>
+  <span class="instance" data-pokemon-pokedex></span>
+</div>
+</div>

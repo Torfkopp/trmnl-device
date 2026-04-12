@@ -1,0 +1,245 @@
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Simple Calendar</title>
+  <style>
+    :root {
+      --bg: #f7f7f9;
+      --card: #fff;
+      --muted: #666;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      width:800px
+      height:480px;
+    }
+
+    .calendar {
+      width: 800px;
+      height: 480px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0px;
+      margin-bottom: 0px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .weekday {
+      font-size: .9rem;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .weeks {
+      flex: 1;
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 0;
+      overflow: hidden;
+      border-left: 1px solid #eee;
+    }
+
+    .week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      position: relative;
+      border-top: 1px solid #eee;
+    }
+
+    .day {
+      border-right: 1px solid #eee;
+      border-radius: 0;
+      font-size: .75rem;
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .week:last-child {
+      border-bottom: 1px solid #eee;
+    }
+
+    .day.in-month .date {
+      font-weight: 600
+    }
+
+    .day.out-month .date {
+      color: #bdbdbd
+    }
+
+    .day.today {
+      border: 2px solid black;
+    }
+
+    .date {
+      display: inline-block;
+      padding: 2px 3px;
+      border-radius: 4px
+    }
+
+    .event-seg {
+      margin-top: 1px;
+      border-radius: 3px;
+      padding: 0 3px;
+      box-sizing: border-box;
+      white-space: normal;
+      word-wrap: break-word;
+      font-size: 0.65rem;
+      color: white;
+      transition: transform .1s, opacity .1s;
+      width: 100%
+    }
+
+    .event-seg[data-kind="private"][data-all-day="true"] {
+      background: #000000
+    }
+
+    .event-seg[data-kind="private"][data-all-day="false"] {
+      background: #bdbdbd;
+      color: #000000;
+    }
+
+    .event-seg[data-kind="feiertage"]{
+      background: #333
+    }
+
+    .event-seg[data-kind="football"][data-all-day="true"] {
+      background: #333
+    }
+
+    .event-seg[data-kind="football"][data-all-day="false"] {
+      background: #eee;
+      color: #000000;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="calendar">
+    <div class="weekdays" id="weekdays"></div>
+    <div class="weeks" id="weeks"></div>
+  </div>
+
+  <script>
+    async function fetchEvents() {
+      const res = await fetch('localhost:8000/monthly.json');
+      return await res.json();
+    }
+
+    function parseISOToDate(iso) {
+      if (!iso) return null;
+      return new Date(iso.replace(' ', 'T'));
+    }
+
+    function startOfWeekMonday(d) {
+      const dt = new Date(d);
+      const day = (dt.getDay() + 6) % 7;
+      dt.setDate(dt.getDate() - day);
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    }
+
+    function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); x.setHours(0, 0, 0, 0); return x }
+
+    function buildWeeksForMonth(year, month) {
+      const firstOfMonth = new Date(year, month, 1);
+      const firstWeekStart = startOfWeekMonday(firstOfMonth);
+      const weeks = [];
+      let wkStart = new Date(firstWeekStart);
+      for (let w = 0; w < 6; w++) {
+        const days = [];
+        for (let d = 0; d < 7; d++) {
+          const day = addDays(wkStart, d);
+          days.push(day);
+        }
+        weeks.push({ start: new Date(wkStart), days });
+        wkStart = addDays(wkStart, 7);
+      }
+      return weeks;
+    }
+
+    function renderCalendar(events) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0).toLocaleString(['de-DE'], { timeZone: 'Europe/Berlin' });
+      const year = now.getFullYear();
+      const month = now.getMonth();
+
+      const weekdaysEl = document.getElementById('weekdays');
+      const shortDays = [];
+      for (let i = 0; i < 7; i++) {
+        const tmp = new Date(2020, 0, 6 + i);
+        shortDays.push(tmp.toLocaleString("de-DE", { weekday: 'long' }));
+      }
+      weekdaysEl.innerHTML = shortDays.map(d => `<div class="weekday">${d}</div>`).join('');
+
+      const weeks = buildWeeksForMonth(year, month);
+      const weeksEl = document.getElementById('weeks');
+      weeksEl.innerHTML = '';
+
+      const eventsByDate = {};
+      events.forEach(ev => {
+        const start = parseISOToDate(ev.start);
+        const end = parseISOToDate(ev.end);
+        const iter = new Date(start);
+        const endDate = new Date(end);
+
+        while (iter <= endDate) {
+          const key = iter.toLocaleString(["sv-SE"], { timeZone: 'Europe/Berlin' }).slice(0, 10);
+          if (!eventsByDate[key]) eventsByDate[key] = [];
+          eventsByDate[key].push(ev);
+          iter.setDate(iter.getDate() + 1);
+        }
+      });
+
+      weeks.forEach(wk => {
+        const wkEl = document.createElement('div');
+        wkEl.className = 'week';
+        wk.days.forEach(day => {
+          const inMonth = (day.getMonth() === month);
+          const key = day.toLocaleString(["sv-SE"], { timeZone: 'Europe/Berlin' }).slice(0, 10);
+          const dayEl = document.createElement('div');
+          dayEl.className = 'day ' + (inMonth ? 'in-month' : 'out-month');
+          if (day.getTime() === now.getTime()) dayEl.classList.add('today');
+          dayEl.innerHTML = `<div class="date">${day.getDate()}</div>`;
+
+          const dayEvents = eventsByDate[key] || [];
+          dayEvents.forEach(ev => {
+            const segEl = document.createElement('div');
+            segEl.className = 'event-seg';
+            segEl.dataset.allDay = ev.all_day ? 'true' : 'false';
+            segEl.dataset.kind = ev.kind || 'default';
+            const startDate = parseISOToDate(ev.start);
+            segEl.textContent = ev.all_day ? ev.summary : `${startDate.toLocaleTimeString(["de-DE"], { hour: '2-digit', minute: '2-digit', timeZone: "Europe/Berlin" })} ${ev.summary}`;
+            dayEl.appendChild(segEl);
+          });
+
+          const baseHeight = 30;
+          const eventHeight = 15;
+          const newHeight = baseHeight + Math.min(dayEvents.length * eventHeight, 40);
+          dayEl.style.minHeight = newHeight + 'px';
+
+          wkEl.appendChild(dayEl);
+        });
+        weeksEl.appendChild(wkEl);
+      });
+    }
+
+    (async function () {
+      const events = await fetchEvents();
+      renderCalendar(events);
+    })();
+  </script>
+</body>
+
+</html>
