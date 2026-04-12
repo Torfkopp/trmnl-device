@@ -1,8 +1,6 @@
 <div class="view view--{{ size }}">
-
 {%assign lat = trmnl.plugin_settings.custom_fields_values.lat %}
 {%assign lon= trmnl.plugin_settings.custom_fields_values.lon %}
-
 {% assign MAX_HOURS_DISPLAY_TODAY = trmnl.plugin_settings.custom_fields_values.disp_full_today_max_hours | plus: 0 %}
 {% assign TOMORROW_DISPLAY_HOURS = trmnl.plugin_settings.custom_fields_values.disp_full_tomorrow_hours | split: ',' %}
 {% assign LANG = trmnl.plugin_settings.custom_fields_values.lang %}
@@ -55,7 +53,22 @@
   {% assign code_str_today = weather.daily.weather_code[0] | append: '' %}
 {% endcomment %}
 {% assign code_str_today = worst_weather_today | append: '' %}
-{% assign icon_today = icons[code_str_today].day %}
+
+{% # Find if worst weather happens during day or night %}
+{% assign worst_weather_today_is_day = 1 %}
+{% for idx_str in today_hourly_indices %}
+  {% assign idx = idx_str | plus: 0 %}
+  {% assign code = weather.hourly.weather_code[idx] | append: '' %}
+  {% if code == worst_weather_today %}
+    {% assign worst_weather_today_is_day = weather.hourly.is_day[idx] %}
+    {% break %}
+  {% endif %}
+{% endfor %}
+
+{% assign icon_today = icons[code_str_today].night %}
+{% if worst_weather_today_is_day == 1 %}
+  {% assign icon_today = icons[code_str_today].day %}
+{% endif %}
 
 {% # TOMORROW # %}
 {% # build array of indices for tomorrow's hours %}
@@ -139,7 +152,8 @@
         <div class="meta"></div>
         <div class="grid grid--cols-1">
           <span class="title">
-            {{- translations.today[LANG] }} &mdash; {{ weather.daily.time[0] | l_date: "l, d.m.Y", LANG -}}
+            {{- translations.today[LANG] }} &mdash; {% assign weekday = weather.daily.time[0] | date: '%A' %}
+{% case weekday %}{% when 'Monday' %}Montag{% when 'Tuesday' %}Dienstag{% when 'Wednesday' %}Mittwoch{% when 'Thursday' %}Donnerstag{% when 'Friday' %}Freitag{% when 'Saturday' %}Samstag{% when 'Sunday' %}Sonntag{% endcase %}{{ weather.daily.time[0] | date: ', %d.%m.%Y' -}}
           </span>
           <div class="grid">
             <div class="grid grid--cols-2">
@@ -227,9 +241,9 @@
       <div class="meta"></div>
       <div class="content">
         <span class="title">
-          {{- translations.tomorrow[LANG] }} &mdash; {{ weather.daily.time[1] | l_date: "l", LANG -}}
+          {{- translations.tomorrow[LANG] }} &mdash; {% assign weekday = weather.daily.time[1] | date: '%A' %}{% case weekday %}{% when 'Monday' %}Montag{% when 'Tuesday' %}Dienstag{% when 'Wednesday' %}Mittwoch{% when 'Thursday' %}Donnerstag{% when 'Friday' %}Freitag{% when 'Saturday' %}Samstag{% when 'Sunday' %}Sonntag{% endcase %}{{ weather.daily.time[1] | date: ', %d.%m.%Y' -}}
         </span>
-        <div class="grid">
+        <div class="grid grid--cols-5">
           <div class="col col--start col--span-1">
             <div class="grid grid--cols-2">
               <div class="col col--center">

@@ -133,7 +133,7 @@
 
   <script>
     async function fetchEvents() {
-      const res = await fetch('localhost:8000/monthly.json');
+      const res = await fetch('http://192.168.178.32:8000/monthly.json');
       return await res.json();
     }
 

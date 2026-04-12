@@ -116,7 +116,7 @@
 
     async function loadAndRender(){
       let events=[];
-      const res=await fetch('localhost:8000/weekly.json');
+      const res=await fetch('http://192.168.178.32:8000/weekly.json');
       events=await res.json();
 
       const today=new Date().toLocaleDateString(['sv-SE'], { timeZone: TIMEZONE }).split("-");
