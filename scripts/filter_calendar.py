@@ -1,7 +1,35 @@
-import json
-from datetime import datetime, timedelta, timezone
+import json, re
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from dateutil.rrule import rrulestr
+from datetime import datetime, timedelta, timezone
+
+def parse_ics_datetime(key, value):
+    """
+    Parses ICS datetime strings including TZID.
+    Examples:
+        DTSTART:20250630T190000Z
+        DTSTART;TZID=Europe/Berlin:20250630T190000
+        DTSTART;VALUE=DATE:20250630
+    """
+    # Extract TZID if present
+    tz_match = re.search(r'TZID=([^;:]+)', key)
+    tz = ZoneInfo(tz_match.group(1)) if tz_match else None
+
+    # All-day event (DATE only)
+    if "VALUE=DATE" in key or "T" not in value:
+        dt = datetime.strptime(value, "%Y%m%d")
+        return dt.replace(tzinfo=tz)
+
+    # UTC time
+    if value.endswith("Z"):
+        dt = datetime.strptime(value, "%Y%m%dT%H%M%SZ")
+        return dt.replace(tzinfo=ZoneInfo("UTC"))
+
+    # Local time with TZID
+    dt = datetime.strptime(value, "%Y%m%dT%H%M%S")
+    return dt.replace(tzinfo=tz)
+
 
 # Filter monthly
 def filter_monthly():
@@ -51,20 +79,28 @@ def recurring_event(event, dt_start_key, dt_end_key, start, end):
     if not "UNTIL" in rrule: 
         rrule += f";UNTIL={end.astimezone(tz=timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     
-    events = list(rrulestr(s=rrule, dtstart=datetime.fromisoformat(event.get(dt_start_key)).astimezone()))
+    #events = list(rrulestr(s=rrule, dtstart=datetime.fromisoformat(event.get(dt_start_key)).astimezone()))
+    dtstart = parse_ics_datetime(dt_start_key, event.get(dt_start_key))
+    events = list(rrulestr(s=rrule, dtstart=dtstart))
     
     events = [x for x in events if start <= x <= end]
     
-    events = [{
-        "start": x,
-        "end": x + (datetime.fromisoformat(event.get(dt_end_key)) - datetime.fromisoformat(event.get(dt_start_key))),
-        "summary": event.get("SUMMARY"),
-        "description": event.get("DESCRIPTION"),
-        "all_day": not "T" in event.get(dt_start_key),
-        "kind": event.get("kind", "private")
-    } for x in events]
+    ret_events = []
+    for x in events.copy():
+        start_dt = parse_ics_datetime(dt_start_key, event.get(dt_start_key))
+        end_dt = parse_ics_datetime(dt_end_key, event.get(dt_end_key))
+        duration = end_dt - start_dt
+	
+        ret_events.append({
+            "start": x.astimezone(),
+            "end": (x + duration).astimezone(),
+            "summary": event.get("SUMMARY"),
+            "description": event.get("DESCRIPTION"),
+            "all_day": not "T" in event.get(dt_start_key),
+            "kind": event.get("kind", "private")
+        })
     
-    return events
+    return ret_events
     
     
 def read_ics_file(path):
@@ -108,8 +144,8 @@ def filter_calendar(start, end):
                     for event in event_list: filtered_events.append(event)
                     continue
                 
-            time_start = datetime.fromisoformat(ics_dic.get(dt_start_key)).astimezone()
-            time_end = datetime.fromisoformat(ics_dic.get(dt_end_key)).astimezone()
+            time_start = parse_ics_datetime(dt_start_key, ics_dic.get(dt_start_key)).astimezone()
+            time_end = parse_ics_datetime(dt_end_key, ics_dic.get(dt_end_key)).astimezone()
             if time_end < start or end < time_start: continue
             
             event = {
