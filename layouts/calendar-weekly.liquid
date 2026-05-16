@@ -63,10 +63,10 @@
       margin-bottom:6px;
       border-left:4px solid transparent;
       border-radius:6px;
-      font-size:15px;
+      font-size:16px;
       line-height:1.4;
     }
-    .event-time{font-size:13px;color:var(--muted);font-weight:600;margin-right:4px}
+    .event-time{font-size:15px;color:var(--muted);font-weight:600;margin-right:4px}
     .summary{font-weight:500}
 
     .all-day-event[data-kind="private"] {
@@ -116,7 +116,7 @@
 
     async function loadAndRender(){
       let events=[];
-      const res=await fetch('http://192.168.178.32:8000/weekly.json');
+      const res=await fetch('http://192.168.178.101:8000/weekly.json');
       events=await res.json();
 
       const today=new Date().toLocaleDateString(['sv-SE'], { timeZone: TIMEZONE }).split("-");
