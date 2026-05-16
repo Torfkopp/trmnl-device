@@ -89,14 +89,20 @@ def recurring_event(event, dt_start_key, dt_end_key, start, end):
     for x in events.copy():
         start_dt = parse_ics_datetime(dt_start_key, event.get(dt_start_key))
         end_dt = parse_ics_datetime(dt_end_key, event.get(dt_end_key))
+        is_all_day = "VALUE=DATE" in dt_start_key or "T" not in event.get(dt_start_key)
+
         duration = end_dt - start_dt
-	
+
+        # All-day DTEND is exclusive in ICS
+        if is_all_day:
+            duration = max(duration - timedelta(days=1), timedelta(0))
+
         ret_events.append({
             "start": x.astimezone(),
             "end": (x + duration).astimezone(),
             "summary": event.get("SUMMARY"),
             "description": event.get("DESCRIPTION"),
-            "all_day": not "T" in event.get(dt_start_key),
+            "all_day": is_all_day,
             "kind": event.get("kind", "private")
         })
     
@@ -148,12 +154,17 @@ def filter_calendar(start, end):
             time_end = parse_ics_datetime(dt_end_key, ics_dic.get(dt_end_key)).astimezone()
             if time_end < start or end < time_start: continue
             
+            # ICS all-day DTEND is exclusive
+            is_all_day = "VALUE=DATE" in dt_start_key or "T" not in ics_dic.get(dt_start_key)
+            if is_all_day:
+                time_end = max(time_end - timedelta(days=1), time_start)
+            
             event = {
                 "start": time_start,
                 "end": time_end,
                 "summary": ics_dic.get("SUMMARY"),
                 "description": ics_dic.get("DESCRIPTION"),
-                "all_day": not "T" in ics_dic.get(dt_start_key),
+                "all_day": is_all_day,
                 "kind": kind
             }
         
@@ -180,4 +191,3 @@ if __name__ == "__main__":
     filtered = filter_calendar(start, end)
     with open("data/monthly.json", mode="w", encoding="utf8") as file:
         file.write(json.dumps(filtered, indent=4, default=str, ensure_ascii=False))
-    
